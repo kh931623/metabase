@@ -34,6 +34,8 @@ export const downloadQueryResults =
   (opts: DownloadQueryResultsOpts) => async () => {
     if (opts.type === Urls.exportFormatPng) {
       await downloadChart(opts);
+    } else if (opts.type === 'copy') {
+      await copyResultToClipboard(opts)
     } else {
       await downloadDataset(opts);
     }
@@ -46,6 +48,27 @@ const downloadDataset = async (opts: DownloadQueryResultsOpts) => {
   const fileContent = await response.blob();
   openSaveDialog(fileName, fileContent);
 };
+
+const jsonToTsv = (jsonData: Array<object>): string => {
+  return jsonData
+    .map((obj) => Object.values(obj).join("\t"))
+    .join('\n')
+}
+
+const copyResultToClipboard = async (opts: DownloadQueryResultsOpts) => {
+  // set type to json to get json content from API
+  const newOpts = Object.assign({}, opts, {
+    type: 'csv'
+  })
+
+  const params = getDatasetParams(newOpts);
+  const response = await getDatasetResponse(params);
+  const csvContent = await response.text();
+  const tsvContent = csvContent.replace(/\,/g, '\t')
+
+  await navigator.clipboard.writeText(tsvContent)
+  window.alert('Result has been copied to Clipboard!')
+}
 
 const downloadChart = async ({ question }: DownloadQueryResultsOpts) => {
   const fileName = getChartFileName(question);
